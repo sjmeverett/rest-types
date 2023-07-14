@@ -5,6 +5,22 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@koa/bodyparser": "^5.0.0",
+    "@koa/router": "^12.0.0",
+    "@prisma/client": "^5.0.0",
+    "@types/koa": "^2.13.6",
+    "@types/koa__router": "^12.0.0",
+    "isomorphic-fetch": "^3.0.0",
+    "koa": "^2.14.2",
     "zod": "^3.21.4"
+  },
+  "devDependencies": {
+    "@types/isomorphic-fetch": "^0.0.36",
+    "@types/node": "^20.4.2",
+    "prisma": "^5.0.0",
+    "rollup": "^3.26.2",
+    "rollup-plugin-dts": "^5.3.0",
+    "sucrase": "^3.32.0",
+    "typescript": "^5.1.6"
   }
 }
