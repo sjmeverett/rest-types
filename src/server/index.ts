@@ -1,7 +1,7 @@
 import z from 'zod';
 import { inferRoutes, route } from './framework';
 import { PrismaClient } from '@prisma/client';
-import { createKoaRouter } from './framework/createKoaRouter';
+import { createKoaRouter, getContext } from './framework/createKoaRouter';
 import Koa from 'koa';
 
 const prisma = new PrismaClient();
@@ -16,7 +16,8 @@ const createPet = route({
     id: z.string(),
     name: z.string(),
   }),
-}).handler(async (ctx, data) => {
+}).handler(async (data) => {
+  const ctx = getContext();
   ctx.status = 201;
   return prisma.pet.create({ data });
 });
@@ -35,7 +36,7 @@ const getPet = route({
   path: '/pets/:id',
   input: z.object({ id: z.string() }),
   output: z.object({ id: z.string(), name: z.string() }),
-}).handler(async (_ctx, input) => {
+}).handler(async (input) => {
   return prisma.pet.findUniqueOrThrow({ where: { id: input.id } });
 });
 

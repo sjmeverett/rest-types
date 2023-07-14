@@ -1,9 +1,23 @@
 import Router, { RouterParamContext } from '@koa/router';
-import { DefaultContext, DefaultState, Middleware } from 'koa';
+import {
+  DefaultContext,
+  DefaultState,
+  Middleware,
+  ParameterizedContext,
+} from 'koa';
 import bodyParser from '@koa/bodyparser';
-import { ApiRouteWithHandler, HandlerContext } from './index';
+import { AsyncLocalStorage } from 'async_hooks';
+import { ApiRoute } from '.';
 
-export function createKoaRouter(routes: readonly ApiRouteWithHandler[]) {
+export type HandlerContext = ParameterizedContext<
+  DefaultState,
+  DefaultContext & RouterParamContext<DefaultState, DefaultContext>,
+  any
+>;
+
+const asyncLocalStorage = new AsyncLocalStorage<HandlerContext>();
+
+export function createKoaRouter(routes: readonly ApiRoute[]) {
   const router = new Router();
   // bodyParser parses incoming JSON request bodies
   // and puts them in ctx.request.body
@@ -17,40 +31,30 @@ export function createKoaRouter(routes: readonly ApiRouteWithHandler[]) {
 }
 
 function wrapHandler(
-  route: ApiRouteWithHandler,
+  route: ApiRoute,
 ): Middleware<DefaultState, DefaultContext & RouterParamContext> {
   return async (ctx) => {
-    ctx.body = await callRoute(ctx, route, {
-      ...ctx.params,
-      ...ctx.request.body,
+    await asyncLocalStorage.run(ctx, async () => {
+      ctx.body = await route.handler({
+        ...ctx.params,
+        ...ctx.request.body,
+      });
     });
   };
 }
 
-export async function callRoute(
-  ctx: HandlerContext,
-  route: ApiRouteWithHandler,
-  input: any,
-) {
-  // validate the input
-  const inputValidation = route.input.safeParse(input);
+/**
+ * Gets the koa request context for the current request. If you are getting the
+ * "Could not find handler context" error, the async context is getting lost somehow,
+ * and you should move the `getContext` call to the top of the handler.
+ * @returns the koa request context for the current request
+ */
+export function getContext(): HandlerContext {
+  const context = asyncLocalStorage.getStore();
 
-  if (!inputValidation.success) {
-    throw new Error(
-      'Input validation failed: ' + inputValidation.error.message,
-    );
+  if (!context) {
+    throw new Error('Could not find handler context');
   }
 
-  const output = await route.handler(ctx, inputValidation.data);
-
-  // validate the output
-  const outputValidation = route.output.safeParse(output);
-
-  if (!outputValidation.success) {
-    throw new Error(
-      'Output validation failed: ' + outputValidation.error.message,
-    );
-  }
-
-  return outputValidation.data;
+  return context;
 }
